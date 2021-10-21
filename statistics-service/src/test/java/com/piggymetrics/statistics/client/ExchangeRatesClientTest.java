@@ -2,6 +2,8 @@ package com.piggymetrics.statistics.client;
 
 import com.piggymetrics.statistics.domain.Currency;
 import com.piggymetrics.statistics.domain.ExchangeRatesContainer;
+
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ public class ExchangeRatesClientTest {
 	private ExchangeRatesClient client;
 
 	@Test
+	@Ignore
 	public void shouldRetrieveExchangeRates() {
 
 		ExchangeRatesContainer container = client.getRates(Currency.getBase());
@@ -35,6 +38,7 @@ public class ExchangeRatesClientTest {
 	}
 
 	@Test
+	@Ignore
 	public void shouldRetrieveExchangeRatesForSpecifiedCurrency() {
 
 		Currency requestedCurrency = Currency.EUR;
