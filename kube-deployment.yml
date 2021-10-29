@@ -1,0 +1,683 @@
+# rabbitmq
+--- 
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    app: rabbitmq
+  name: rabbitmq
+spec: 
+  clusterIP: None
+  ports:
+  - name: rabbitmq-service
+    port: 6379
+    targetPort: 6379
+  selector: 
+    app: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        ports:
+        - containerPort: 15672
+          name: rabbitmq
+
+# config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config
+  labels:
+    app: config
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8888
+    targetPort: 8888
+    name: config-service
+  selector:
+    app: config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config
+  labels:
+    app: config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config
+  template:
+    metadata:
+      labels:
+        app: config
+    spec:
+      containers:
+      - name: config
+        image: gcr.io/$PROJECT_ID/piggymetrics-config
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        ports:
+        - containerPort: 8888
+          name: config
+
+# registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  labels:
+    app: registry
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8761
+    targetPort: 8761
+    name: registry-service
+  selector:
+    app: registry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  labels:
+    app: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+      - name: registry
+        image: gcr.io/$PROJECT_ID/piggymetrics-registry
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        ports:
+        - containerPort: 8761
+          name: registry
+
+# gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  labels:
+    app: gateway
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 4000
+    targetPort: 4000
+    name: gateway-service
+  selector:
+    app: gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels:
+    app: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+      - name: gateway
+        image: gcr.io/$PROJECT_ID/piggymetrics-gateway
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        ports:
+        - containerPort: 4000
+          name: gateway
+
+# auth-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5000
+    targetPort: 5000
+    name: auth-service
+  selector:
+    app: auth-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: gcr.io/$PROJECT_ID/piggymetrics-auth-service
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        - name: NOTIFICATION_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: notification-service-password
+              key: password
+        - name: STATISTICS_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: statistics-service-password
+              key: password
+        - name: ACCOUNT_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: account-service-password
+              key: password
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 5000
+          name: auth-service
+
+# auth-mongodb
+--- 
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    app: auth-mongodb
+  name: auth-mongodb
+spec: 
+  clusterIP: None
+  ports: 
+  - name: auth-mongodb
+    port: 25000
+    targetPort: 27017
+  selector: 
+    app: auth-mongodb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-mongodb
+  labels:
+    app: auth-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-mongodb
+  template:
+    metadata:
+      labels:
+        app: auth-mongodb
+    spec:
+      containers:
+      - name: auth-mongodb
+        image: gcr.io/$PROJECT_ID/piggymetrics-mongodb
+        env:
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 27017
+          name: auth-mongodb
+
+# account-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-service
+  labels:
+    app: account-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 6000
+    targetPort: 6000
+    name: account-service
+  selector:
+    app: account-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-service
+  labels:
+    app: account-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-service
+  template:
+    metadata:
+      labels:
+        app: account-service
+    spec:
+      containers:
+      - name: account-service
+        image: gcr.io/$PROJECT_ID/piggymetrics-account-service
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        - name: ACCOUNT_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: account-service-password
+              key: password
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 6000
+          name: account-service
+
+# account-mongodb
+--- 
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    app: account-mongodb
+  name: account-mongodb
+spec: 
+  clusterIP: None
+  ports: 
+  - name: account-mongodb
+    port: 26000
+    targetPort: 27017
+  selector: 
+    app: account-mongodb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-mongodb
+  labels:
+    app: account-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: account-mongodb
+  template:
+    metadata:
+      labels:
+        app: account-mongodb
+    spec:
+      containers:
+      - name: account-mongodb
+        image: gcr.io/$PROJECT_ID/piggymetrics-mongodb
+        env:
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 27017
+          name: account-mongodb
+# statistics-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: statistics-service
+  labels:
+    app: statistics-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 7000
+    targetPort: 7000
+    name: statistics-service
+  selector:
+    app: statistics-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: statistics-service
+  labels:
+    app: statistics-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: statistics-service
+  template:
+    metadata:
+      labels:
+        app: statistics-service
+    spec:
+      containers:
+      - name: statistics-service
+        image: gcr.io/$PROJECT_ID/piggymetrics-statistics-service
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        - name: STATISTICS_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: statistics-service-password
+              key: password
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 7000
+          name: stats-service
+
+# statistics-mongodb
+--- 
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    app: statistics-mongodb
+  name: statistics-mongodb
+spec: 
+  clusterIP: None
+  ports: 
+  - name: statistics-mongodb
+    port: 27000
+    targetPort: 27017
+  selector: 
+    app: statistics-mongodb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: statistics-mongodb
+  labels:
+    app: statistics-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: statistics-mongodb
+  template:
+    metadata:
+      labels:
+        app: statistics-mongodb
+    spec:
+      containers:
+      - name: statistics-mongodb
+        image: gcr.io/$PROJECT_ID/piggymetrics-mongodb
+        env:
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 27017
+          name: stats-mongodb
+# notification-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: notification-service
+  selector:
+    app: notification-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: gcr.io/$PROJECT_ID/piggymetrics-notification-service
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        - name: NOTIFICATION_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: notification-service-password
+              key: password
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 8000
+          name: notif-service
+
+# notification-mongodb
+--- 
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    app: notification-mongodb
+  name: notification-mongodb
+spec: 
+  clusterIP: None
+  ports: 
+  - name: notification-mongodb
+    port: 28000
+    targetPort: 27017
+  selector: 
+    app: notification-mongodb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-mongodb
+  labels:
+    app: notification-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-mongodb
+  template:
+    metadata:
+      labels:
+        app: notification-mongodb
+    spec:
+      containers:
+      - name: notification-mongodb
+        image: gcr.io/$PROJECT_ID/piggymetrics-mongodb
+        env:
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-password
+              key: password
+        ports:
+        - containerPort: 27017
+          name: notif-mongodb
+# monitoring
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monitoring
+  labels:
+    app: monitoring
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 9000
+    targetPort: 8080
+    name: monitoring
+  selector:
+    app: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring
+  labels:
+    app: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitoring
+  template:
+    metadata:
+      labels:
+        app: monitoring
+    spec:
+      containers:
+      - name: monitoring
+        image: gcr.io/$PROJECT_ID/piggymetrics-monitoring
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        ports:
+        - containerPort: 8080
+          name: monitoring
+# turbine-stream-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: turbine-stream-service
+  labels:
+    app: turbine-stream-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8989
+    targetPort: 8989
+    name: turbine-stream-service
+  selector:
+    app: turbine-stream-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: turbine-stream-service
+  labels:
+    app: turbine-stream-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: turbine-stream-service
+  template:
+    metadata:
+      labels:
+        app: turbine-stream-service
+    spec:
+      containers:
+      - name: turbine-stream-service
+        image: gcr.io/$PROJECT_ID/piggymetrics-turbine-stream-service
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: config-service-password
+              key: password
+        ports:
+        - containerPort: 8989
+          name: turbine-service
