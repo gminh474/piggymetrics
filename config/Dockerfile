@@ -6,7 +6,7 @@ COPY src src
 
 RUN mvn -B package
 
-FROM java:8-jre as production
+FROM openjdk:8-jre-slim as production
 
 COPY --from=build /target/config.jar /app/
 CMD ["java", "-Xmx200m", "-jar", "/app/config.jar"]
